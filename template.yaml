@@ -11,23 +11,29 @@ Globals:
       - x86_64
 
 Parameters:
-  TemplateStorage:
-    Type: String
-    Default: local
-    AllowedValues: [local, s3]
-    Description: Where to load Jinja2 templates from (local filesystem or S3)
-
-  TemplateBucket:
-    Type: String
-    Default: ""
-    Description: S3 bucket name for templates (required when TemplateStorage=s3)
-
   IntentModelId:
     Type: String
     Default: anthropic.claude-haiku-4-5-20251001-v1:0
     Description: Bedrock model ID for the intent extractor
 
 Resources:
+  TemplateBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
   PromptWeaveFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -36,7 +42,7 @@ Resources:
       Description: PromptWeave MCP tool — normalize_prompt
       Environment:
         Variables:
-          TEMPLATE_STORAGE: !Ref TemplateStorage
+          TEMPLATE_STORAGE: s3
           TEMPLATE_BUCKET: !Ref TemplateBucket
           INTENT_MODEL_ID: !Ref IntentModelId
           POWERTOOLS_SERVICE_NAME: promptweave
@@ -47,20 +53,14 @@ Resources:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
               Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/*"
-        - !If
-          - UseS3Templates
-          - S3ReadPolicy:
-              BucketName: !Ref TemplateBucket
-          - !Ref AWS::NoValue
+        - S3ReadPolicy:
+            BucketName: !Ref TemplateBucket
       Events:
         McpApi:
           Type: HttpApi
           Properties:
             Path: /{proxy+}
             Method: ANY
-
-Conditions:
-  UseS3Templates: !Equals [!Ref TemplateStorage, s3]
 
 Outputs:
   ApiUrl:
@@ -70,3 +70,7 @@ Outputs:
   FunctionArn:
     Description: Lambda function ARN
     Value: !GetAtt PromptWeaveFunction.Arn
+
+  TemplateBucketName:
+    Description: S3 bucket for versioned Jinja2 prompt templates
+    Value: !Ref TemplateBucket

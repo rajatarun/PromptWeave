@@ -60,7 +60,12 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --stack-name promptweave \
-            --capabilities CAPABILITY_IAM \
-            --parameter-overrides \
-              TemplateStorage=s3 \
-              TemplateBucket=${{ secrets.TEMPLATE_BUCKET }}
+            --capabilities CAPABILITY_IAM
+
+      - name: Upload templates to S3
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name promptweave \
+            --query "Stacks[0].Outputs[?OutputKey=='TemplateBucketName'].OutputValue" \
+            --output text)
+          aws s3 sync templates/ s3://$BUCKET/templates/ --delete
