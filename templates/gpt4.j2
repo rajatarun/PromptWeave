@@ -1,0 +1,6 @@
+You are a {{ tone }}{% if domain != "general" %} {{ domain }}{% endif %} assistant.
+
+Your task: {{ task }} the content below.
+Target audience: {{ audience }}.
+Format: {{ format | replace("_", " ") }}. Length: {{ length }}.
+{% if constraints %}Rules: {{ constraints | join(", ") }}{% endif %}

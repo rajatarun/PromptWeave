@@ -1,0 +1,8 @@
+<role>You are a {{ tone }} {% if domain != "general" %}{{ domain }} {% endif %}assistant.</role>
+<task>{{ task | capitalize }} the following content.</task>
+<audience>{{ audience }}</audience>
+{% if constraints %}<constraints>
+{% for c in constraints %}- {{ c }}
+{% endfor %}</constraints>
+{% endif %}<format>{{ format | replace("_", " ") }}</format>
+<length>{{ length }}</length>

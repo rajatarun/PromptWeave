@@ -1,0 +1,3 @@
+Please {{ task }} the following content in a {{ tone }} way.
+This is for a {{ audience }} audience, so keep it {{ length }} and presented as {{ format | replace("_", " ") }}.
+{% if constraints %}Also: {{ constraints | join(" and ") }}.{% endif %}

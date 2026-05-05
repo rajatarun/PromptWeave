@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: PromptWeave — MCP-compatible prompt normalization service
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+
+Parameters:
+  TemplateStorage:
+    Type: String
+    Default: local
+    AllowedValues: [local, s3]
+    Description: Where to load Jinja2 templates from (local filesystem or S3)
+
+  TemplateBucket:
+    Type: String
+    Default: ""
+    Description: S3 bucket name for templates (required when TemplateStorage=s3)
+
+  IntentModelId:
+    Type: String
+    Default: anthropic.claude-haiku-4-5-20251001-v1:0
+    Description: Bedrock model ID for the intent extractor
+
+Resources:
+  PromptWeaveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.handler
+      CodeUri: .
+      Description: PromptWeave MCP tool — normalize_prompt
+      Environment:
+        Variables:
+          TEMPLATE_STORAGE: !Ref TemplateStorage
+          TEMPLATE_BUCKET: !Ref TemplateBucket
+          INTENT_MODEL_ID: !Ref IntentModelId
+          POWERTOOLS_SERVICE_NAME: promptweave
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/*"
+        - !If
+          - UseS3Templates
+          - S3ReadPolicy:
+              BucketName: !Ref TemplateBucket
+          - !Ref AWS::NoValue
+      Events:
+        McpApi:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Conditions:
+  UseS3Templates: !Equals [!Ref TemplateStorage, s3]
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL for the PromptWeave MCP server
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/mcp"
+
+  FunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt PromptWeaveFunction.Arn
