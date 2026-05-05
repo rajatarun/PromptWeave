@@ -44,7 +44,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/teamweave-github-actions-sam-deployer
+          role-to-assume: arn:aws:iam::239571291755:role/teamweave-github-actions-sam-deployer
           aws-region: us-east-1
 
       - uses: aws-actions/setup-sam@v2
