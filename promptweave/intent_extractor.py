@@ -109,7 +109,12 @@ def _make_client() -> anthropic.Anthropic | anthropic.AnthropicBedrock:
 
 
 def _model_id() -> str:
-    return os.getenv("INTENT_MODEL_ID", "claude-haiku-4-5-20251001")
+    if explicit := os.getenv("INTENT_MODEL_ID"):
+        return explicit
+    # Bedrock model IDs use the provider-prefixed form; Anthropic API IDs do not.
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return "claude-haiku-4-5-20251001"
+    return "anthropic.claude-haiku-4-5-20251001-v1:0"
 
 
 async def extract_intent(user_input: str) -> dict[str, Any]:

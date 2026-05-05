@@ -9,6 +9,7 @@ import pytest
 
 from promptweave.intent_extractor import (
     _merge_defaults,
+    _model_id,
     _parse_response,
     extract_intent,
 )
@@ -153,3 +154,25 @@ class TestExtractIntent:
                 result = await extract_intent("Analyze this document.")
 
         assert result["task"] == "analyze"
+
+
+class TestModelId:
+    def test_explicit_env_var_takes_precedence_over_api_key(self, monkeypatch):
+        monkeypatch.setenv("INTENT_MODEL_ID", "my-custom-model")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "key")
+        assert _model_id() == "my-custom-model"
+
+    def test_explicit_env_var_takes_precedence_over_bedrock(self, monkeypatch):
+        monkeypatch.setenv("INTENT_MODEL_ID", "my-custom-model")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        assert _model_id() == "my-custom-model"
+
+    def test_anthropic_api_default_when_api_key_set(self, monkeypatch):
+        monkeypatch.delenv("INTENT_MODEL_ID", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+        assert _model_id() == "claude-haiku-4-5-20251001"
+
+    def test_bedrock_default_when_no_api_key(self, monkeypatch):
+        monkeypatch.delenv("INTENT_MODEL_ID", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        assert _model_id() == "anthropic.claude-haiku-4-5-20251001-v1:0"
