@@ -1,0 +1,9 @@
+{
+  "task": "Explain what PromptWeave will do once the template engine exists.",
+  "audience": "open-source contributors",
+  "tone": "clear",
+  "format": "short_paragraph",
+  "constraints": {
+    "avoid_hype": true
+  }
+}
