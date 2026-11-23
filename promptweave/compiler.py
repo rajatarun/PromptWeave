@@ -31,6 +31,7 @@ class CompiledPrompt:
     estimated_tokens: int
     dropped_context_blocks: list[str] = field(default_factory=list)
     tools: list[dict[str, Any]] = field(default_factory=list)
+    name: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -104,4 +105,5 @@ def compile_prompt(
         estimated_tokens=estimated,
         dropped_context_blocks=dropped_labels,
         tools=list(spec.tools),
+        name=spec.name,
     )
