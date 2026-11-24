@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -122,7 +122,7 @@ class PromptRegistry:
     ) -> dict[str, Any]:
         """Store a compiled prompt artifact and return its prompt-artifact-v1 dict."""
         resolved_name = name or compiled.name or _extract_name_from_prompt_id(compiled.prompt_id)
-        created_at = datetime.now(UTC).isoformat()
+        created_at = datetime.now(timezone.utc).isoformat()
         artifact_digest = _artifact_integrity_hash(
             schema=PROMPT_ARTIFACT_SCHEMA,
             prompt_id=compiled.prompt_id,
