@@ -57,7 +57,7 @@ def _sample_spec(**overrides) -> IntentSpec:
 
 
 def test_version_and_public_exports():
-    assert promptweave.__version__ == "0.3.0"
+    assert promptweave.__version__ == "0.4.0"
     assert hasattr(promptweave, "compile_matrix")
     assert hasattr(promptweave, "MatrixReport")
     assert hasattr(promptweave, "MatrixFamilyEntry")

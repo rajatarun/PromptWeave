@@ -9,6 +9,7 @@ import sys
 from promptweave.adapters import SUPPORTED_FAMILIES
 from promptweave.compiler import compile_prompt
 from promptweave.diff import diff_compiled
+from promptweave.linter import lint_prompt_spec
 from promptweave.matrix import compile_matrix
 from promptweave.registry import PromptRegistry
 from promptweave.spec import IntentSpec
@@ -171,6 +172,29 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Emit machine-readable JSON matrix report.",
     )
 
+    lint_cmd = sub.add_parser(
+        "lint",
+        help="Statically lint a JSON IntentSpec for policy, injection risk, and token budget.",
+    )
+    lint_cmd.add_argument("spec_path", help="Path to JSON IntentSpec file.")
+    lint_cmd.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Optional maximum token budget; exceeding it fails lint.",
+    )
+    lint_cmd.add_argument(
+        "--no-require-system-goal",
+        action="store_true",
+        help="Allow specs without an explicit system role or constraint instructions.",
+    )
+    lint_cmd.add_argument(
+        "--json",
+        dest="as_json",
+        action="store_true",
+        help="Emit machine-readable JSON lint report.",
+    )
+
     return parser
 
 
@@ -301,6 +325,33 @@ def _handle_matrix(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_lint(args: argparse.Namespace) -> int:
+    try:
+        spec = IntentSpec.from_json_file(args.spec_path)
+        report = lint_prompt_spec(
+            spec,
+            max_tokens=args.max_tokens,
+            require_system_goal=not args.no_require_system_goal,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.as_json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        status = "OK" if report.ok else "FAILED"
+        budget = f" / {report.max_tokens}" if report.max_tokens is not None else ""
+        print(
+            f"lint: {status} | tokens={report.estimated_tokens}{budget} | "
+            f"errors={report.error_count} warnings={report.warning_count}"
+        )
+        for issue in report.issues:
+            loc = f" (block={issue.block_id})" if issue.block_id is not None else ""
+            print(f"  [{issue.severity.upper()}] {issue.code}{loc}: {issue.message}")
+    return 0 if report.ok else 2
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -331,6 +382,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "matrix":
         return _handle_matrix(args)
+
+    if args.command == "lint":
+        return _handle_lint(args)
 
     return 2
 
