@@ -66,8 +66,8 @@ def _rich_spec(**overrides) -> IntentSpec:
     return IntentSpec(**base)
 
 
-def test_version_is_0_2_0():
-    assert __version__ == "0.2.0"
+def test_version_is_0_3_0():
+    assert __version__ == "0.3.0"
 
 
 @pytest.mark.parametrize("family", SUPPORTED_FAMILIES)

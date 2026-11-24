@@ -47,8 +47,9 @@ def _template_spec() -> IntentSpec:
     )
 
 
-def test_version_is_0_2_0():
-    assert __version__ == "0.2.0"
+def test_version_is_at_least_0_2_0():
+    parts = tuple(int(p) for p in __version__.split(".")[:3])
+    assert parts >= (0, 2, 0)
 
 
 def test_bind_variables_substitutes_all_fields_without_mutating_original():
