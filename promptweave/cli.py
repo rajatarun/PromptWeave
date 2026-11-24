@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from promptweave.adapters import SUPPORTED_FAMILIES
 from promptweave.compiler import compile_prompt
 from promptweave.diff import diff_compiled
 from promptweave.linter import lint_prompt_spec
+from promptweave.lockfile import generate_lockfile, verify_lockfile
 from promptweave.matrix import compile_matrix
 from promptweave.registry import PromptRegistry
 from promptweave.spec import IntentSpec
@@ -193,6 +195,37 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="as_json",
         action="store_true",
         help="Emit machine-readable JSON lint report.",
+    )
+
+    lock_cmd = sub.add_parser(
+        "lock",
+        help="Generate a deterministic prompt lockfile from a SQLite PromptRegistry.",
+    )
+    lock_cmd.add_argument("--db", required=True, help="Path to SQLite registry database.")
+    lock_cmd.add_argument(
+        "--families",
+        default=None,
+        help="Optional comma-separated list of model families to lock.",
+    )
+    lock_cmd.add_argument(
+        "--out",
+        default=None,
+        help="Optional output path to write the lockfile JSON (defaults to stdout).",
+    )
+
+    verify_lock_cmd = sub.add_parser(
+        "verify-lock",
+        help="Verify a SQLite PromptRegistry against a pinned lockfile (non-zero on drift).",
+    )
+    verify_lock_cmd.add_argument("--db", required=True, help="Path to SQLite registry database.")
+    verify_lock_cmd.add_argument(
+        "--lockfile", required=True, help="Path to pinned prompt lockfile JSON."
+    )
+    verify_lock_cmd.add_argument(
+        "--json",
+        dest="as_json",
+        action="store_true",
+        help="Emit machine-readable JSON verification report.",
     )
 
     return parser
@@ -385,6 +418,48 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "lint":
         return _handle_lint(args)
+
+    if args.command == "lock":
+        try:
+            families: list[str] | None = None
+            if args.families is not None:
+                families = [part.strip() for part in args.families.split(",") if part.strip()]
+                if not families:
+                    raise ValueError("--families must specify at least one model family.")
+            with PromptRegistry(args.db) as registry:
+                lockfile = generate_lockfile(registry, families=families)
+            rendered = json.dumps(lockfile, indent=2, sort_keys=True) + "\n"
+            if args.out:
+                out_path = Path(args.out)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(rendered, encoding="utf-8")
+            else:
+                print(rendered, end="")
+        except (OSError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        return 0
+
+    if args.command == "verify-lock":
+        try:
+            lockfile = json.loads(Path(args.lockfile).read_text(encoding="utf-8"))
+            with PromptRegistry(args.db) as registry:
+                result = verify_lockfile(registry, lockfile)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        if args.as_json:
+            print(json.dumps(result, indent=2))
+        elif result["passed"]:
+            print("OK: prompt lockfile verified with zero drift.")
+        else:
+            print(
+                f"DRIFT DETECTED: drifted={len(result['drifted'])} "
+                f"missing={len(result['missing'])} added={len(result['added'])}",
+                file=sys.stderr,
+            )
+        return 0 if result["passed"] else 1
 
     return 2
 

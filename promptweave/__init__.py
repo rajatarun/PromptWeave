@@ -5,6 +5,7 @@ from promptweave.compiler import CompiledPrompt, compile_prompt, estimate_tokens
 from promptweave.diff import PromptDiff, diff_compiled
 from promptweave.fingerprint import compute_sha256, format_prompt_id
 from promptweave.linter import LintIssue, LintReport, lint_prompt_spec
+from promptweave.lockfile import LOCK_VERSION, generate_lockfile, verify_lockfile
 from promptweave.matrix import MatrixFamilyEntry, MatrixReport, compile_matrix
 from promptweave.registry import PROMPT_ARTIFACT_SCHEMA, PromptRegistry
 from promptweave.spec import ContextBlock, Example, IntentSpec
@@ -17,6 +18,7 @@ __all__ = [
     "ContextBlock",
     "Example",
     "IntentSpec",
+    "LOCK_VERSION",
     "LintIssue",
     "LintReport",
     "MatrixFamilyEntry",
@@ -34,5 +36,7 @@ __all__ = [
     "diff_compiled",
     "estimate_tokens",
     "format_prompt_id",
+    "generate_lockfile",
     "lint_prompt_spec",
+    "verify_lockfile",
 ]
